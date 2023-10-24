@@ -20,19 +20,40 @@ class Game:
         self.ground = Ground()
         self.bird = Bird()
 
+        self.tubes = []
+        self.tube_generate_counter = 71
+        self.score = 0
+        self.passed = False
+
         self.is_game_started = False
         self.game_loop()
 
     def drawing_objects(self, delta) -> None:
         self.screen.blit(self.background, (0, 0))
         self.screen.blit(self.bird.image_frame, self.bird.rect)
+        
+        for tube in self.tubes:
+            self.screen.blit(tube.tube_top, tube.rect_top)
+            self.screen.blit(tube.tube_bottom, tube.rect_down)
+        
         self.screen.blit(self.ground.ground_image, (self.ground.start_x, self.ground.y))
         self.screen.blit(self.ground.ground_image, (self.ground.end_x, self.ground.y))
+
+        score_label = pygame.font.SysFont("comicsans", 50).render("Score: " + str(self.score),1,(255,255,255))
+        self.screen.blit(score_label, (self.screen_width - score_label.get_width() - 15, 10))
 
     def updating_objects(self, delta: float) -> None:
         if self.is_game_started:
             self.ground.move()
             self.bird.update(delta)
+
+            if self.tube_generate_counter > 70:
+                self.tubes.append(Tube())
+                self.tube_generate_counter = 0
+            self.tube_generate_counter += 1
+
+            for tube in self.tubes:
+                tube.update(delta)
 
 
     def game_loop(self) -> None:
@@ -117,6 +138,24 @@ class Bird:
         self.animation_count += 1
 
 class Tube:
-    pass
+    # IMAGE_TUBE = pygame.transform.scale2x(pygame.image.load('images/tube.png').convert_alpha())
+    MOVE_SPEED = 250
+    def __init__(self):
+        self.image = pygame.transform.scale2x(pygame.image.load('images/tube.png').convert_alpha())
+        self.tube_bottom = pygame.transform.flip(self.image, False, True)
+        self.tube_top = self.image
+        self.rect_top = self.tube_top.get_rect()
+        self.rect_down = self.tube_bottom.get_rect()
+        self.distance = 150
+        self.rect_top.y = randint(250, 520)
+        self.rect_top.x = 700
+        self.rect_down.y = self.rect_top.y - self.distance - self.rect_top.height
+        self.rect_down.x = 700
+        self.move_speed = self.MOVE_SPEED
+
+    def update(self, delta):
+        self.rect_top.x -= self.move_speed * delta
+        self.rect_down.x -= self.move_speed * delta
+
 
 game = Game()
