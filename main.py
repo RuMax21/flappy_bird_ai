@@ -1,8 +1,7 @@
 import pygame
 import neat
-import os
 import sys, time
-import random
+from random import randint
 
 pygame.init()
 
@@ -21,13 +20,20 @@ class Game:
         self.ground = Ground()
         self.bird = Bird()
 
+        self.is_game_started = False
         self.game_loop()
 
-    def drawing_objects(self) -> None:
+    def drawing_objects(self, delta) -> None:
         self.screen.blit(self.background, (0, 0))
+        self.screen.blit(self.bird.image_frame, self.bird.rect)
         self.screen.blit(self.ground.ground_image, (self.ground.start_x, self.ground.y))
         self.screen.blit(self.ground.ground_image, (self.ground.end_x, self.ground.y))
-        self.screen.blit(self.bird.image_frame, self.bird.rect)
+
+    def updating_objects(self, delta: float) -> None:
+        if self.is_game_started:
+            self.ground.move()
+            self.bird.update(delta)
+
 
     def game_loop(self) -> None:
         last_time = time.time()
@@ -40,16 +46,21 @@ class Game:
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        self.is_game_started = True
+                    if event.key == pygame.K_SPACE:
+                        self.bird.horizontal_offset(delta)
             
-            self.drawing_objects()
-            self.ground.move()
-            self.bird.update(delta)
+            self.drawing_objects(delta)
+
+            self.updating_objects(delta)
 
             pygame.display.update()
             self.clock.tick(60)
 
 class Ground:
-    SPEED: float = 2.5
+    SPEED: int = 2
     SPAWN_Y: int = 730
     def __init__(self) -> None:
         self.ground_speed = self.SPEED
@@ -78,17 +89,34 @@ class Bird:
         self.index_frame = 0
         self.image_frame = self.images_of_birds[self.index_frame]
         self.rect = self.image_frame.get_rect(center = (100, 100))
-        
+        self.animation_count = 0
+
         self.gravity = 10
         self.speed_y = 0
+        self.speed_x = 300
     
-    def update(self, delta) -> None:
+    def update(self, delta: float) -> None:
         self.speed_y += self.gravity * delta
         self.rect.y += self.speed_y
+        self.animation()
+    
+    def horizontal_offset(self, delta: float) -> None:
+        self.speed_y = -self.speed_x * delta
 
-class Tube():
-    def __init__(self) -> None:
-        pass
+    def animation(self) -> None:
+        if self.animation_count < 5:
+            self.image_frame = self.images_of_birds[0]
+        elif self.animation_count < 10:
+            self.image_frame = self.images_of_birds[1]
+        elif self.animation_count < 15:
+            self.image_frame = self.images_of_birds[2]
+        else:
+            self.animation_count = 0
+            self.image_frame = self.images_of_birds[0]
+        
+        self.animation_count += 1
 
+class Tube:
+    pass
 
 game = Game()
