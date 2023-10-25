@@ -21,7 +21,7 @@ class Game:
         self.bird = Bird()
 
         self.tubes = []
-        self.tube_generate_counter = 71
+        self.tube_generate_counter = 10
         self.score = 0
         self.passed = False
 
@@ -44,7 +44,7 @@ class Game:
 
     def updating_objects(self, delta: float) -> None:
         if self.is_game_started:
-            self.ground.move()
+            self.ground.move(delta)
             self.bird.update(delta)
 
             if self.tube_generate_counter > 70:
@@ -54,6 +54,10 @@ class Game:
 
             for tube in self.tubes:
                 tube.update(delta)
+
+            if len(self.tubes) != 0:
+                if self.tubes[0].rect_top.right < 0:
+                    self.tubes.pop(0)
 
 
     def game_loop(self) -> None:
@@ -77,11 +81,19 @@ class Game:
 
             self.updating_objects(delta)
 
+            self.check_flying()
+
             pygame.display.update()
             self.clock.tick(60)
 
+    def check_flying(self) -> None:
+        if len(self.tubes):
+            if (self.bird.rect.bottom > 730) or self.bird.rect.colliderect(self.tubes[0].rect_top) or self.bird.rect.colliderect(self.tubes[0].rect_down):
+                self.bird.is_flying = False
+                self.is_game_started = False
+
 class Ground:
-    SPEED: int = 2
+    SPEED: int = 250
     SPAWN_Y: int = 730
     def __init__(self) -> None:
         self.ground_speed = self.SPEED
@@ -92,9 +104,9 @@ class Ground:
         self.end_x = self.ground_width
         self.y = self.SPAWN_Y
 
-    def move(self) -> None:
-        self.start_x -= self.ground_speed
-        self.end_x -= self.ground_speed
+    def move(self, delta) -> None:
+        self.start_x -= self.ground_speed * delta
+        self.end_x -= self.ground_speed * delta
         
         if self.start_x + self.ground_width < 0:
             self.start_x = self.end_x + self.ground_width
@@ -115,12 +127,15 @@ class Bird:
         self.gravity = 10
         self.speed_y = 0
         self.speed_x = 300
+
+        self.is_flying = True
     
     def update(self, delta: float) -> None:
-        self.speed_y += self.gravity * delta
-        self.rect.y += self.speed_y
-        self.animation()
-    
+        if self.is_flying:
+            self.speed_y += self.gravity * delta
+            self.rect.y += self.speed_y
+            self.animation()
+        
     def horizontal_offset(self, delta: float) -> None:
         self.speed_y = -self.speed_x * delta
 
@@ -138,22 +153,25 @@ class Bird:
         self.animation_count += 1
 
 class Tube:
-    # IMAGE_TUBE = pygame.transform.scale2x(pygame.image.load('images/tube.png').convert_alpha())
-    MOVE_SPEED = 250
-    def __init__(self):
+    MOVE_SPEED: int = 250
+    DISTANCE: int = 150
+    SPAWN_TUBE_X: int = 700
+    def __init__(self) -> None:
         self.image = pygame.transform.scale2x(pygame.image.load('images/tube.png').convert_alpha())
         self.tube_bottom = pygame.transform.flip(self.image, False, True)
         self.tube_top = self.image
         self.rect_top = self.tube_top.get_rect()
         self.rect_down = self.tube_bottom.get_rect()
-        self.distance = 150
+        self.distance = self.DISTANCE
+       
         self.rect_top.y = randint(250, 520)
-        self.rect_top.x = 700
+        self.rect_top.x = self.SPAWN_TUBE_X
         self.rect_down.y = self.rect_top.y - self.distance - self.rect_top.height
-        self.rect_down.x = 700
+        self.rect_down.x = self.SPAWN_TUBE_X
+        
         self.move_speed = self.MOVE_SPEED
 
-    def update(self, delta):
+    def update(self, delta: float) -> None:
         self.rect_top.x -= self.move_speed * delta
         self.rect_down.x -= self.move_speed * delta
 
