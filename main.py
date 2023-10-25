@@ -11,21 +11,23 @@ class Game:
     def __init__(self) -> None:
         self.screen_width = self.WIDTH
         self.screen_height = self.HEIGHT
+        
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
         self.caption = pygame.display.set_caption("Flappy bird with AI")
-
-        self.clock = pygame.time.Clock()
-
         self.background = pygame.transform.scale(pygame.image.load('images/background.png').convert_alpha(), (600, 900))
+
         self.ground = Ground()
         self.bird = Bird()
-
         self.tubes = []
-        self.tube_generate_counter = 10
-        self.score = 0
-        self.passed = False
 
+        self.tube_generate_counter = 71
+        self.score = 0
+
+        self.passed = False
+        self.score_monitoring = False
         self.is_game_started = False
+
+        self.clock = pygame.time.Clock()
         self.game_loop()
 
     def drawing_objects(self, delta) -> None:
@@ -46,20 +48,30 @@ class Game:
         if self.is_game_started:
             self.ground.move(delta)
             self.bird.update(delta)
+            self.working_tubes(delta)
+            self.counter_score()
 
-            if self.tube_generate_counter > 70:
-                self.tubes.append(Tube())
-                self.tube_generate_counter = 0
-            self.tube_generate_counter += 1
+    def working_tubes(self, delta: float) -> None:
+        if self.tube_generate_counter > 70:
+            self.tubes.append(Tube())
+            self.tube_generate_counter = 0
+        self.tube_generate_counter += 1
 
-            for tube in self.tubes:
-                tube.update(delta)
+        for tube in self.tubes:
+            tube.update(delta)
 
-            if len(self.tubes) != 0:
-                if self.tubes[0].rect_top.right < 0:
-                    self.tubes.pop(0)
+        if len(self.tubes) != 0:
+            if self.tubes[0].rect_top.right < 0:
+                self.tubes.pop(0)
 
-
+    def counter_score(self) -> None:
+        if len(self.tubes) > 0:
+            if self.bird.rect.left > self.tubes[0].rect_down.left and self.bird.rect.right < self.tubes[0].rect_down.right and not self.score_monitoring:
+                self.score_monitoring = True
+            if self.bird.rect.left > self.tubes[0].rect_down.right and self.score_monitoring:
+                self.score_monitoring = False
+                self.score += 1
+            
     def game_loop(self) -> None:
         last_time = time.time()
         while True:
@@ -72,10 +84,11 @@ class Game:
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_RETURN:
-                        self.is_game_started = True
                     if event.key == pygame.K_SPACE:
                         self.bird.horizontal_offset(delta)
+                        self.is_game_started = True
+                    if event.key == pygame.K_RETURN:
+                        self.restart_game()
             
             self.drawing_objects(delta)
 
@@ -91,6 +104,18 @@ class Game:
             if (self.bird.rect.bottom > 730) or self.bird.rect.colliderect(self.tubes[0].rect_top) or self.bird.rect.colliderect(self.tubes[0].rect_down):
                 self.bird.is_flying = False
                 self.is_game_started = False
+                self.drawing_text_to_restart()
+
+    def restart_game(self) -> None:
+        self.score = 0
+        self.tubes.clear()
+        self.is_game_started = True
+        self.bird.is_flying = True
+        self.bird.rect = self.bird.image_frame.get_rect(center = (100, 100))
+
+    def drawing_text_to_restart(self) -> None:
+        restart_label = pygame.font.SysFont("comicsans", 50).render('press "enter" to restart',1,(255,255,255))
+        self.screen.blit(restart_label, (150, 350))
 
 class Ground:
     SPEED: int = 250
