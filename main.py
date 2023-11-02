@@ -24,15 +24,14 @@ class Game:
         self.tube_generate_counter = 71
         self.score = 0
 
+        self.nets = []
         self.ge = []
 
         self.score_monitoring = False
         self.is_game_started = True
 
         self.clock = pygame.time.Clock()
-        # self.game_loop()
 
-    #отрисовка всех объектов на экране
     def drawing_objects(self, delta) -> None:
         self.screen.blit(self.background, (0, 0))
         for bird in self.birds:
@@ -45,16 +44,11 @@ class Game:
         self.screen.blit(self.ground.ground_image, (self.ground.start_x, self.ground.y))
         self.screen.blit(self.ground.ground_image, (self.ground.end_x, self.ground.y))
 
-        score_label = pygame.font.SysFont("comicsans", 50).render("Score: " + str(self.score),1,(255,255,255))
-        self.screen.blit(score_label, (self.screen_width - score_label.get_width() - 15, 10))
+        bird = pygame.font.SysFont("comicsans", 50).render("Birds: " + str(len(self.birds)),1,(255,255,255))
+        self.screen.blit(bird, (self.screen_width - bird.get_width() - 15, 10))
 
-    # обновление оъектов
-    # def updating_objects(self, delta: float) -> None:
-    #     if self.is_game_started:
-    #         self.ground.move(delta)
-    #         self.bird.update(delta)
-    #         self.working_tubes(delta)
-    #         self.counter_score()
+        score_label = pygame.font.SysFont("comicsans", 50).render("Score: " + str(self.score),1,(255,255,255))
+        self.screen.blit(score_label, (self.screen_width - score_label.get_width() - 15, 40))
 
     def working_tubes(self, delta: float) -> None:
         if self.tube_generate_counter > 70:
@@ -77,7 +71,7 @@ class Game:
                 self.score_monitoring = False
                 self.score += 1
                 for genome in self.ge:
-                    genome.fitness += 10
+                    genome.fitness += 1
 
     def collide_checking(self, bird) -> None:
         if len(self.tubes):
@@ -102,12 +96,10 @@ class Game:
 
     def game_loop(self, genomes, config) -> None:
 
-        nets = []
-
         for genome_id, genome in genomes:
             genome.fitness = 0
             net = neat.nn.FeedForwardNetwork.create(genome, config)
-            nets.append(net)
+            self.nets.append(net)
             self.birds.append(Bird())
             self.ge.append(genome)
 
@@ -136,11 +128,9 @@ class Game:
 
             for x, bird in enumerate(self.birds):
                 self.ge[x].fitness += 0.1
-                # bird.move()
 
                 if len(self.tubes) > 0:
-                    output = nets[self.birds.index(bird)].activate((bird.rect.y, abs(bird.rect.y - self.tubes[pipe_ind].rect_top.y), abs(bird.rect.y - self.tubes[pipe_ind].rect_down.y )))
-
+                    output = self.nets[self.birds.index(bird)].activate((bird.rect.y, bird.rect.y - self.tubes[pipe_ind].rect_top.y, bird.rect.y - self.tubes[pipe_ind].rect_down.y, bird.rect.x - self.tubes[pipe_ind].rect_down.x))
                     if output[0] > 0.5:
                         bird.moving_bird(delta)
 
@@ -148,17 +138,17 @@ class Game:
 
             self.working_tubes(delta)
 
-            for tube in self.tubes:
-                tube.update(delta)
-            # check for collision
             for bird in self.birds:
                 bird.update(delta)
                 self.counter_score(bird)
+
                 if self.collide_checking(bird):
-                    self.ge[self.birds.index(bird)].fitness -= 2
-                    nets.pop(self.birds.index(bird))
+                    self.ge[self.birds.index(bird)].fitness -= 5
+                    self.nets.pop(self.birds.index(bird))
                     self.ge.pop(self.birds.index(bird))
                     self.birds.pop(self.birds.index(bird))
+                else:
+                    self.ge[self.birds.index(bird)].fitness += 5
 
             pygame.display.update()
             self.clock.tick(60)
@@ -167,7 +157,7 @@ class Game:
 
 
 class Ground:
-    SPEED: int = 200
+    SPEED: int = 400
     SPAWN_Y: int = 730
     def __init__(self) -> None:
         self.ground_speed = self.SPEED
@@ -190,7 +180,7 @@ class Ground:
 
 class Bird:
     FLAP: int = 300
-    GRAVITY: int = 10
+    GRAVITY: int = 9
     def __init__(self) -> None:
         self.images_of_birds = [pygame.transform.scale2x(pygame.image.load('images/bird1.png').convert_alpha()),
                                 pygame.transform.scale2x(pygame.image.load('images/bird2.png').convert_alpha()),
@@ -229,8 +219,8 @@ class Bird:
         self.animation_count += 1
 
 class Tube:
-    MOVE_SPEED: int = 200
-    DISTANCE: int = 200
+    MOVE_SPEED: int = 400
+    DISTANCE: int = 220
     SPAWN_TUBE_X: int = 700
 
     def __init__(self) -> None:
