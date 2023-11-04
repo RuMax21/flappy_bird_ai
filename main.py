@@ -1,7 +1,6 @@
 import pygame
 import neat
 import sys, time
-import os
 from random import randint
 
 pygame.init()
@@ -20,15 +19,13 @@ class Game:
         self.ground = Ground()
         self.birds = []
         self.tubes = []
-
-        self.tube_generate_counter = 71
-        self.score = 0
-
         self.nets = []
         self.ge = []
 
+        self.tube_generate_counter = -1
+        self.score = 0
+
         self.score_monitoring = False
-        self.is_game_started = True
 
         self.clock = pygame.time.Clock()
 
@@ -44,8 +41,11 @@ class Game:
         self.screen.blit(self.ground.ground_image, (self.ground.start_x, self.ground.y))
         self.screen.blit(self.ground.ground_image, (self.ground.end_x, self.ground.y))
 
-        bird = pygame.font.SysFont("comicsans", 50).render("Birds: " + str(len(self.birds)),1,(255,255,255))
-        self.screen.blit(bird, (self.screen_width - bird.get_width() - 15, 10))
+        self.drawing_text()
+
+    def drawing_text(self) -> None:
+        bird_label = pygame.font.SysFont("comicsans", 50).render("Birds: " + str(len(self.birds)),1,(255,255,255))
+        self.screen.blit(bird_label, (self.screen_width - bird_label.get_width() - 15, 10))
 
         score_label = pygame.font.SysFont("comicsans", 50).render("Score: " + str(self.score),1,(255,255,255))
         self.screen.blit(score_label, (self.screen_width - score_label.get_width() - 15, 40))
@@ -73,7 +73,7 @@ class Game:
                 for genome in self.ge:
                     genome.fitness += 1
 
-    def collide_checking(self, bird) -> None:
+    def collide_checking(self, bird) -> bool:
         if len(self.tubes):
             if (bird.rect.bottom > 730) or (bird.rect.top < 0) or bird.rect.colliderect(self.tubes[0].rect_top) or bird.rect.colliderect(self.tubes[0].rect_down):
                 return True
@@ -82,7 +82,7 @@ class Game:
         self.score = 0
         self.tubes.clear()
 
-    def neat_run(self, config_path):
+    def neat_run(self, config_path) -> None:
         config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_path)
@@ -95,14 +95,12 @@ class Game:
         winner = population.run(self.game_loop, 50)
 
     def game_loop(self, genomes, config) -> None:
-
         for genome_id, genome in genomes:
             genome.fitness = 0
             net = neat.nn.FeedForwardNetwork.create(genome, config)
             self.nets.append(net)
             self.birds.append(Bird())
             self.ge.append(genome)
-
 
         run = True
         last_time = time.time()
@@ -121,16 +119,16 @@ class Game:
                     pygame.quit()
                     sys.exit()
 
-            pipe_ind = 0
+            aiming_tube = 0
             if len(self.birds) > 0:
                 if len(self.tubes) > 1 and self.birds[0].rect.x > self.tubes[0].rect_top.x + self.tubes[0].tube_top.get_width():
-                    pipe_ind = 1
+                    aiming_tube = 1
 
             for x, bird in enumerate(self.birds):
                 self.ge[x].fitness += 0.1
 
                 if len(self.tubes) > 0:
-                    output = self.nets[self.birds.index(bird)].activate((bird.rect.y, bird.rect.y - self.tubes[pipe_ind].rect_top.y, bird.rect.y - self.tubes[pipe_ind].rect_down.y, bird.rect.x - self.tubes[pipe_ind].rect_down.x))
+                    output = self.nets[self.birds.index(bird)].activate((bird.rect.y, bird.rect.y - self.tubes[aiming_tube].rect_top.y, bird.rect.y - self.tubes[aiming_tube].rect_down.y, bird.rect.x - self.tubes[aiming_tube].rect_down.x))
                     if output[0] > 0.5:
                         bird.moving_bird(delta)
 
@@ -245,6 +243,5 @@ class Tube:
 
 if __name__ == "__main__":
     game = Game()
-    local_dir = os.path.dirname(__file__)
-    config_path = os.path.join(local_dir, 'config')
+    config_path = 'config'
     game.neat_run(config_path)
