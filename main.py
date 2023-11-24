@@ -71,7 +71,7 @@ class Game:
                 self.score_monitoring = False
                 self.score += 1
                 for genome in self.ge:
-                    genome.fitness += 1
+                    genome.fitness += 5
 
     def collide_checking(self, bird) -> bool:
         if len(self.tubes):
@@ -125,7 +125,7 @@ class Game:
                     aiming_tube = 1
 
             for x, bird in enumerate(self.birds):
-                self.ge[x].fitness += 0.1
+                self.ge[x].fitness += 0.5
 
                 if len(self.tubes) > 0:
                     output = self.nets[self.birds.index(bird)].activate((bird.rect.y, bird.rect.y - self.tubes[aiming_tube].rect_top.y, bird.rect.y - self.tubes[aiming_tube].rect_down.y, bird.rect.x - self.tubes[aiming_tube].rect_down.x))
@@ -145,14 +145,11 @@ class Game:
                     self.nets.pop(self.birds.index(bird))
                     self.ge.pop(self.birds.index(bird))
                     self.birds.pop(self.birds.index(bird))
-                else:
-                    self.ge[self.birds.index(bird)].fitness += 5
 
             pygame.display.update()
             self.clock.tick(60)
 
             self.drawing_objects(delta)
-
 
 class Ground:
     SPEED: int = 400
